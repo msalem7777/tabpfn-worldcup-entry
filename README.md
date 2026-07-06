@@ -9,10 +9,6 @@ The entire pipeline is reproducible from a single open data source: the
 [martj42 international results dataset](https://github.com/martj42/international_results).
 No scraping is involved.
 
-Current stage: **Round of 16** (`03_predict_round16.py`). Round-of-32
-performance: multiclass log-loss **0.8408** vs a 1.0986 uniform baseline,
-11/16 correct modal picks.
-
 ---
 
 ## Repository layout
