@@ -1,9 +1,8 @@
 # FIFA World Cup 2026 — Match Outcome Prediction Pipeline
 
-A TabPFN-based prediction system for the FIFA World Cup 2026 competition,
-built to outperform the Prior Labs baseline. The pipeline layers time-varying
+A TabPFN-based prediction system for the FIFA World Cup 2026 competition. The pipeline layers time-varying
 Dixon–Coles team ratings and rolling out-of-sample residual-bias features on
-top of a Prior-Labs-style engineered feature set, then applies anchor-gated
+top of a Prior-Labs engineered feature set, then applies anchor-gated
 post-hoc calibration to the frozen TabPFN forecasts.
 
 The entire pipeline is reproducible from a single open data source: the
@@ -28,17 +27,6 @@ performance: multiclass log-loss **0.8408** vs a 1.0986 uniform baseline,
 
 Prior rounds' scripts (e.g. the Round-of-32 versions of 03/04) are superseded
 each round and can be kept in a `legacy/` folder for provenance.
-
-### Retired: Sofascore statistics path
-
-Earlier iterations included a Sofascore scraping script and a
-team-characteristics builder feeding an experimental "v4" model variant. That
-path was retired: v4 was removed after repeated instability, the active v3
-model consumes none of its output, and the scraping approach was dropped on
-data-sourcing grounds. Script 03 retains dormant v4 hooks
-(`load_team_characteristics`, `CHAR_FEATURES`) that are never invoked in the
-main flow; they can be revived later against a properly licensed stats source
-(FBref within its published crawl policy, StatsBomb open data, or a paid API).
 
 ### Data directories (created automatically)
 
