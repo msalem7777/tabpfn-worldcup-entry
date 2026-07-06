@@ -1,0 +1,7 @@
+curl_cffi
+pandas
+numpy
+scikit-learn
+matplotlib
+tabpfn
+tabpfn-client

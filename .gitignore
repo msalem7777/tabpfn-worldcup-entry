@@ -1,0 +1,9 @@
+.venv*/
+__pycache__/
+*.pyc
+.env
+.env.*
+plots/*.png
+data/raw/*.csv
+data/interim/*.csv
+data/output/*.csv
