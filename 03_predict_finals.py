@@ -1,7 +1,7 @@
 """
-predict_round16.py
+predict_final_round.py
 ─────────────────────────────────────────────────────────────────────────────
-Fits v3 with rolling historical residual-bias features and writes Round-of-16 submission probabilities:
+Fits v3 with rolling historical residual-bias features and writes Final round submission probabilities:
 
   v1 (Baseline) : ELO + form + H2H features, TabPFN
   v2            : v1 features + our attack/defense ratings
@@ -91,10 +91,10 @@ HOME_ADV    = 65.0
 # - Those rolling baseline fits are regular/client mode by default to avoid
 #   spending many thinking-fit quota calls.
 # - The final v3 model fit can use thinking mode.
-# - Round-of-16 prediction uses one batched predict_proba call and does not
+# - Final round prediction uses one batched predict_proba call and does not
 #   consume thinking fits.
 ROLLING_RESIDUAL_BASELINE_THINKING_MODE = False
-FINAL_V3_THINKING_MODE = False
+FINAL_V3_THINKING_MODE = True
 FINAL_V3_THINKING_EFFORT = "high"
 FINAL_V3_THINKING_METRIC = "log_loss"
 FINAL_V3_THINKING_TIMEOUT_S = None  # set to e.g. 300 to cap optimization wall-clock time
@@ -110,28 +110,28 @@ ROLLING_RESIDUAL_LATEST_CSV = OUTPUT_DIR / "rolling_team_residual_bias_latest.cs
 
 # Competition submission output.
 #
-# The competition upload for the current Round of 16 must have exactly these
+# The competition upload for the current Final round must have exactly these
 # columns, with 90-minute match outcome probabilities, not knockout advancement
 # probabilities:
 #   date,home_team,away_team,p_home_win,p_draw,p_away_win
 #
-# If a Round-of-16 bracket slot is still unresolved in BRACKET_R16, fill this
+# If a Final round bracket slot is still unresolved in BRACKET_FINALS, fill this
 # dictionary once the official team is known. The script will only write the
 # upload-ready CSV when every placeholder slot has a concrete full country name.
-ROUND16_SUBMISSION_SLOT_ASSIGNMENT = {
-    # Final Round-of-16 bracket is now fully known, so no placeholder-slot
-    # assignment is needed. BRACKET_R16 below contains only concrete country names.
+FINAL_ROUND_SUBMISSION_SLOT_ASSIGNMENT = {
+    # Final Final round bracket is now fully known, so no placeholder-slot
+    # assignment is needed. BRACKET_FINALS below contains only concrete country names.
 }
 
-ROUND16_SUBMISSION_CSV = OUTPUT_DIR / "round_of_16_submission_rolling_residual_v3.csv"
-ROUND16_CANDIDATE_PROBABILITIES_CSV = OUTPUT_DIR / "round_of_16_candidate_probabilities_rolling_residual_v3.csv"
+FINAL_ROUND_SUBMISSION_CSV = OUTPUT_DIR / "final_round_submission_rolling_residual_v3.csv"
+FINAL_ROUND_CANDIDATE_PROBABILITIES_CSV = OUTPUT_DIR / "final_round_candidate_probabilities_rolling_residual_v3.csv"
 
 # Separate candidate-feature export aligned row-for-row with
-# ROUND16_CANDIDATE_PROBABILITIES_CSV.
+# FINAL_ROUND_CANDIDATE_PROBABILITIES_CSV.
 #
 # This is intentionally not the competition submission file. It is for
 # post-hoc calibration, diagnostics, and reference-model case studies.
-ROUND16_CANDIDATE_FEATURES_CSV = OUTPUT_DIR / "round_of_16_candidate_features_rolling_residual_v3.csv"
+FINAL_ROUND_CANDIDATE_FEATURES_CSV = OUTPUT_DIR / "final_round_candidate_features_rolling_residual_v3.csv"
 
 # Explicit engineered-feature exports. These are diagnostic/reproducibility
 # artifacts, not competition uploads. They let us inspect exactly what the
@@ -139,7 +139,7 @@ ROUND16_CANDIDATE_FEATURES_CSV = OUTPUT_DIR / "round_of_16_candidate_features_ro
 # consumed after ratings and rolling residual-bias features are added.
 BASELINE_ENGINEERED_FEATURES_CSV = INTERIM_DIR / "martj42_baseline_engineered_features.csv"
 FINAL_V3_TRAINING_FEATURES_CSV = INTERIM_DIR / "final_v3_training_engineered_features.csv"
-ROUND16_ENGINEERED_FEATURES_CSV = INTERIM_DIR / "round16_engineered_features_rolling_residual_v3.csv"
+FINAL_ROUND_ENGINEERED_FEATURES_CSV = INTERIM_DIR / "final_round_engineered_features_rolling_residual_v3.csv"
 FEATURE_SET_DICTIONARY_CSV = INTERIM_DIR / "feature_set_dictionary.csv"
 
 # Second OOF stream for calibration fitting: same rolling folds, but the
@@ -153,7 +153,7 @@ SUBMISSION_COLUMNS = [
     "date", "home_team", "away_team", "p_home_win", "p_draw", "p_away_win",
 ]
 
-# Round-of-16 only script: no Monte Carlo settings are needed.
+# Final round only script: no Monte Carlo settings are needed.
 
 # Knockout games cannot end in a draw.
 #
@@ -207,55 +207,30 @@ WC_TEAMS = {
 # - Use martj42 names here, not Sofascore names.
 # - The supplied text says "Cabo Verde"; martj42 uses "Cape Verde".
 # - These match IDs intentionally encode bracket position, not calendar order.
-BRACKET_R16 = [
-    # Round of 16 fixtures derived from the completed Round-of-32 results:
-    #   M73 Canada d. South Africa (0-1)      M74 Paraguay d. Germany (pens 4-3)
-    #   M75 Morocco d. Netherlands (pens 3-2) M76 Brazil d. Japan (2-1)
-    #   M77 France d. Sweden (3-0)            M78 Norway d. Ivory Coast (2-1)
-    #   M79 Mexico d. Ecuador (2-0)           M80 England d. DR Congo (2-1)
-    #   M81 United States d. Bosnia (2-0)     M82 Belgium d. Senegal (3-2 aet)
-    #   M83 Portugal d. Croatia (2-1)         M84 Spain d. Austria (3-0)
-    #   M85 Switzerland d. Algeria (2-0)      M86 Argentina d. Cape Verde (3-2 aet)
-    #   M87 Colombia d. Ghana (1-0)           M88 Egypt d. Australia (pens 4-2)
-    # Home team = winner of the first match id in each derived pair.
-    {"match_id": "M89", "date": "2026-07-04", "home_team": "Paraguay",      "away_team": "France"},
-    {"match_id": "M90", "date": "2026-07-04", "home_team": "Canada",        "away_team": "Morocco"},
-    {"match_id": "M91", "date": "2026-07-05", "home_team": "Brazil",        "away_team": "Norway"},
-    {"match_id": "M92", "date": "2026-07-05", "home_team": "Mexico",        "away_team": "England"},
-    {"match_id": "M93", "date": "2026-07-06", "home_team": "Portugal",      "away_team": "Spain"},
-    {"match_id": "M94", "date": "2026-07-06", "home_team": "United States", "away_team": "Belgium"},
-    {"match_id": "M95", "date": "2026-07-07", "home_team": "Argentina",     "away_team": "Egypt"},
-    {"match_id": "M96", "date": "2026-07-07", "home_team": "Switzerland",   "away_team": "Colombia"},
+BRACKET_FINALS = [
+    # The last two matches of the tournament, both fully resolved by the
+    # completed Semifinal results:
+    #   M101  Spain d. France (2-0, in regulation)
+    #   M102  Argentina d. England (2-1, in regulation)
+    # M103 = third-place match (Semifinal losers), M104 = the Final.
+    # Home team follows the official bracket: loser/winner of M101 first.
+    {"match_id": "M103", "date": "2026-07-18", "home_team": "France", "away_team": "England"},
+    {"match_id": "M104", "date": "2026-07-19", "home_team": "Spain",  "away_team": "Argentina"},
 ]
 
 # Candidate teams for unresolved bracket slots.
-# The updated Round-of-16 bracket is fully resolved, so this remains empty.
+# The updated Final round bracket is fully resolved, so this remains empty.
 BRACKET_SLOT_CANDIDATES = {}
 
 
 BRACKET_DERIVED_ROUNDS = {
-    # Round of 16 is now the concrete root round (BRACKET_R16 above), so the
-    # first derived layer is the Quarterfinal.
-    "Quarterfinal": [
-        {"match_id": "M97",  "date": "2026-07-09", "from": ("M89", "M90")},
-        {"match_id": "M98",  "date": "2026-07-10", "from": ("M93", "M94")},
-        {"match_id": "M99",  "date": "2026-07-11", "from": ("M91", "M92")},
-        {"match_id": "M100", "date": "2026-07-11", "from": ("M95", "M96")},
-    ],
-    "Semifinal": [
-        {"match_id": "M101", "date": "2026-07-14", "from": ("M97", "M98")},
-        {"match_id": "M102", "date": "2026-07-15", "from": ("M99", "M100")},
-    ],
-    "Final": [
-        {"match_id": "M104", "date": "2026-07-19", "from": ("M101", "M102")},
-    ],
+    # Both remaining matches (third place M103, Final M104) are concrete in
+    # BRACKET_FINALS above; nothing is derived anymore.
 }
 
-BRACKET_THIRD_PLACE = {
-    "match_id": "M103",
-    "date": "2026-07-18",
-    "from_losers": ("M101", "M102"),
-}
+# Third place is now a concrete fixture in BRACKET_FINALS, so the separate
+# losers-bracket structure is disabled.
+BRACKET_THIRD_PLACE = None
 
 # ── Feature sets ──────────────────────────────────────────────────────────────
 BASELINE_FEATURES = [
@@ -523,7 +498,7 @@ def make_single_fixture_features_fast(ratings, state_snapshot, home_team, away_t
     # Join time-aware style keyword triplets if enabled.
     #
     # This must happen here as well as in join_style_keywords(...), because
-    # Round-of-16 fixtures are generated directly from the state snapshot rather
+    # Final round fixtures are generated directly from the state snapshot rather
     # than pulled from the historical feature dataframe.
     if STYLE_FEATURES:
         if style_eras_by_team is None or style_encoder is None:
@@ -1288,7 +1263,7 @@ def compute_rolling_residual_bias_features(feats):
     4. For each team, compute prior expanding mean residuals using shift(1), so
        the bias attached to a match only uses earlier residual events.
     5. Return the enriched feature frame and a latest-bias table for future
-       Round-of-16 fixtures.
+       Final round fixtures.
 
     This keeps residual-bias features historically populated without using
     same-row outcomes or filling missing residuals with artificial zeros.
@@ -1575,16 +1550,16 @@ def export_feature_set_dictionary():
     return dictionary
 
 
-def build_round16_engineered_feature_frame(ratings, state_snapshot, slot_candidate_pool,
+def build_final_round_engineered_feature_frame(ratings, state_snapshot, slot_candidate_pool,
                                            style_eras_by_team=None, style_encoder=None):
     """
-    Build the Round-of-16 feature rows before prediction.
+    Build the Final round feature rows before prediction.
 
-    This uses the same fixture feature path as precompute_round16_probability_cache,
+    This uses the same fixture feature path as precompute_final_round_probability_cache,
     but it does not call TabPFN. It exists so we can save the exact feature matrix
-    that will be fed into the final v3 model for Round-of-16 inference.
+    that will be fed into the final v3 model for Final round inference.
     """
-    matchups = collect_possible_round16_matchups(slot_candidate_pool)
+    matchups = collect_possible_final_round_matchups(slot_candidate_pool)
     fixture_frames = []
 
     for matchup in matchups.itertuples(index=False):
@@ -1606,7 +1581,7 @@ def build_round16_engineered_feature_frame(ratings, state_snapshot, slot_candida
         fixture_frames.append(fixture)
 
     if not fixture_frames:
-        raise ValueError("No Round-of-16 fixture rows were generated.")
+        raise ValueError("No Final round fixture rows were generated.")
 
     return pd.concat(fixture_frames, ignore_index=True)
 
@@ -1625,8 +1600,8 @@ def export_engineered_feature_tables(feats, ratings, state_snapshot, slot_candid
        The complete pre-WC training rows consumed by the final rolling-residual
        v3 model: baseline features + first-layer ratings + rolling residual bias.
 
-    3. round16_engineered_features_rolling_residual_v3.csv
-       The actual Round-of-16 feature rows consumed at prediction time.
+    3. final_round_engineered_features_rolling_residual_v3.csv
+       The actual Final round feature rows consumed at prediction time.
 
     4. feature_set_dictionary.csv
        Human-readable feature list and provenance by model version.
@@ -1670,14 +1645,14 @@ def export_engineered_feature_tables(feats, ratings, state_snapshot, slot_candid
         f"({final_train_export.shape[0]:,} rows × {final_train_export.shape[1]:,} cols)"
     )
 
-    round16_export = build_round16_engineered_feature_frame(
+    final_round_export = build_final_round_engineered_feature_frame(
         ratings=ratings,
         state_snapshot=state_snapshot,
         slot_candidate_pool=slot_candidate_pool,
         style_eras_by_team=style_eras_by_team,
         style_encoder=style_encoder,
     )
-    # Include raw human-readable style triplets in the diagnostic Round-of-16
+    # Include raw human-readable style triplets in the diagnostic Final round
     # feature export, but keep only the numeric *_style_triplet_code columns in
     # AUGMENTED_V3_FEATURES for model fitting/prediction.
     #
@@ -1687,24 +1662,24 @@ def export_engineered_feature_tables(feats, ratings, state_snapshot, slot_candid
     #
     # _ordered_existing_columns(...) keeps this safe when style keywords are
     # disabled: missing audit columns are simply omitted from the export.
-    round16_style_audit_cols = [
+    final_round_style_audit_cols = [
         "home_style_triplet",
         "away_style_triplet",
     ]
 
-    round16_cols = _ordered_existing_columns(
-        round16_export,
+    final_round_cols = _ordered_existing_columns(
+        final_round_export,
         (
             ["match_id", "round", "date", "home_team", "away_team"]
-            + round16_style_audit_cols
+            + final_round_style_audit_cols
             + AUGMENTED_V3_FEATURES
         ),
     )
-    round16_export = round16_export[round16_cols]
-    round16_export.to_csv(ROUND16_ENGINEERED_FEATURES_CSV, index=False)
+    final_round_export = final_round_export[final_round_cols]
+    final_round_export.to_csv(FINAL_ROUND_ENGINEERED_FEATURES_CSV, index=False)
     print(
-        f"  Saved Round-of-16 engineered features → {ROUND16_ENGINEERED_FEATURES_CSV} "
-        f"({round16_export.shape[0]:,} rows × {round16_export.shape[1]:,} cols)"
+        f"  Saved Final round engineered features → {FINAL_ROUND_ENGINEERED_FEATURES_CSV} "
+        f"({final_round_export.shape[0]:,} rows × {final_round_export.shape[1]:,} cols)"
     )
 
     export_feature_set_dictionary()
@@ -1712,7 +1687,7 @@ def export_engineered_feature_tables(feats, ratings, state_snapshot, slot_candid
     return {
         "baseline": baseline_export,
         "final_v3_train": final_train_export,
-        "round16": round16_export,
+        "final_round": final_round_export,
     }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2173,13 +2148,13 @@ def build_full_bracket_summary_columns(match_records):
 
 def get_explicit_r32_teams():
     """
-    Returns teams already explicitly placed in the Round of 16.
+    Returns teams already explicitly placed in the Final round.
 
     Placeholder slots such as 2J, 2K, 1K, 3IK, 3AIJ, and 3GJ are excluded.
     """
     return {
         team
-        for match in BRACKET_R16
+        for match in BRACKET_FINALS
         for team in (match["home_team"], match["away_team"])
         if team not in BRACKET_SLOT_CANDIDATES
     }
@@ -2190,7 +2165,7 @@ def build_slot_candidate_pool(ratings):
     Builds the actual candidate pool used for unresolved bracket slots.
 
     A candidate is excluded if:
-    - it is already explicitly present in the Round of 16, or
+    - it is already explicitly present in the Final round, or
     - it has no attack/defense rating, which means v3 cannot score matchups
       involving that team without introducing missing augmented features.
 
@@ -2245,7 +2220,7 @@ def iter_valid_slot_assignments(slot_candidate_pool):
     Enumerates all valid unresolved-slot assignments.
 
     A valid assignment does not reuse a team across unresolved slots and does
-    not duplicate a team already explicitly present in the Round of 16.
+    not duplicate a team already explicitly present in the Final round.
     """
     explicit_teams = get_explicit_r32_teams()
     slot_names = list(slot_candidate_pool)
@@ -2289,8 +2264,8 @@ def resolve_bracket_team(team, slot_assignment):
     return slot_assignment.get(team, team)
 
 
-def resolve_r16_match(match, slot_assignment):
-    """Resolves placeholder teams in one Round-of-16 match dictionary."""
+def resolve_final_match(match, slot_assignment):
+    """Resolves placeholder teams in one Final round match dictionary."""
     resolved = dict(match)
     resolved["home_team"] = resolve_bracket_team(match["home_team"], slot_assignment)
     resolved["away_team"] = resolve_bracket_team(match["away_team"], slot_assignment)
@@ -2327,18 +2302,18 @@ def collect_possible_bracket_matchups(slot_candidate_pool):
             "away_team": away_team,
         })
 
-    # Round of 16: enumerate concrete matchups under all valid future slot assignments.
-    for match in BRACKET_R16:
+    # Final round: enumerate concrete matchups under all valid future slot assignments.
+    for match in BRACKET_FINALS:
         entrants = set()
 
         for assignment in valid_assignments:
-            resolved = resolve_r16_match(match, assignment)
+            resolved = resolve_final_match(match, assignment)
             home_team = resolved["home_team"]
             away_team = resolved["away_team"]
 
             add_matchup(
                 match_id=match["match_id"],
-                round_name="Round of 16",
+                round_name="Final round",
                 match_date=match["date"],
                 home_team=home_team,
                 away_team=away_team,
@@ -2369,20 +2344,22 @@ def collect_possible_bracket_matchups(slot_candidate_pool):
 
             possible_entrants_by_match[match["match_id"]] = set(home_candidates) | set(away_candidates)
 
-    # Third-place match: semifinal losers can be any semifinal entrants.
-    third_source_a, third_source_b = BRACKET_THIRD_PLACE["from_losers"]
-    home_candidates = possible_entrants_by_match[third_source_a]
-    away_candidates = possible_entrants_by_match[third_source_b]
+    # Third-place match: only relevant while it is a derived losers bracket.
+    # With BRACKET_THIRD_PLACE = None (M103 concrete in BRACKET_FINALS), skip.
+    if BRACKET_THIRD_PLACE is not None:
+        third_source_a, third_source_b = BRACKET_THIRD_PLACE["from_losers"]
+        home_candidates = possible_entrants_by_match[third_source_a]
+        away_candidates = possible_entrants_by_match[third_source_b]
 
-    for home_team in sorted(home_candidates):
-        for away_team in sorted(away_candidates):
-            add_matchup(
-                match_id=BRACKET_THIRD_PLACE["match_id"],
-                round_name="Third place",
-                match_date=BRACKET_THIRD_PLACE["date"],
-                home_team=home_team,
-                away_team=away_team,
-            )
+        for home_team in sorted(home_candidates):
+            for away_team in sorted(away_candidates):
+                add_matchup(
+                    match_id=BRACKET_THIRD_PLACE["match_id"],
+                    round_name="Third place",
+                    match_date=BRACKET_THIRD_PLACE["date"],
+                    home_team=home_team,
+                    away_team=away_team,
+                )
 
     matchups = pd.DataFrame(matchup_rows).drop_duplicates().reset_index(drop=True)
 
@@ -2393,9 +2370,9 @@ def collect_possible_bracket_matchups(slot_candidate_pool):
 
 
 
-def collect_possible_round16_matchups(slot_candidate_pool):
+def collect_possible_final_round_matchups(slot_candidate_pool):
     """
-    Builds only the possible Round-of-16 matchups required by the competition.
+    Builds only the possible Final round matchups required by the competition.
 
     This intentionally does not enumerate later knockout rounds and does not run
     Monte Carlo. Each unresolved placeholder is expanded into its runtime
@@ -2404,7 +2381,7 @@ def collect_possible_round16_matchups(slot_candidate_pool):
     """
     rows = []
 
-    for match in BRACKET_R16:
+    for match in BRACKET_FINALS:
         home_candidates = (
             slot_candidate_pool[match["home_team"]]
             if is_unresolved_slot_name(match["home_team"])
@@ -2423,7 +2400,7 @@ def collect_possible_round16_matchups(slot_candidate_pool):
 
                 rows.append({
                     "match_id": match["match_id"],
-                    "round": "Round of 16",
+                    "round": "Final round",
                     "date": match["date"],
                     "home_team": home_team,
                     "away_team": away_team,
@@ -2431,12 +2408,12 @@ def collect_possible_round16_matchups(slot_candidate_pool):
 
     matchups = pd.DataFrame(rows).drop_duplicates().reset_index(drop=True)
 
-    print(f"\n  Unique Round-of-16 matchup/date rows: {len(matchups):,}")
+    print(f"\n  Unique Final round matchup/date rows: {len(matchups):,}")
     return matchups
 
-def build_round16_candidate_feature_export(matchups, fixture_feats, model_feature_cols):
+def build_final_round_candidate_feature_export(matchups, fixture_feats, model_feature_cols):
     """
-    Build a row-aligned Round-of-16 candidate feature export.
+    Build a row-aligned Final round candidate feature export.
 
     This table is meant for post-hoc calibration and diagnostics. It is kept
     separate from the probability CSV so the probability/submission artifacts
@@ -2500,23 +2477,23 @@ def build_round16_candidate_feature_export(matchups, fixture_feats, model_featur
 
     return out
 
-def precompute_round16_probability_cache(model_artifact, ratings, state_snapshot,
+def precompute_final_round_probability_cache(model_artifact, ratings, state_snapshot,
                                          slot_candidate_pool,
                                          characteristics=None, stat_cols=None,
                                          style_eras_by_team=None, style_encoder=None):
     """
-    Computes all possible Round-of-16 matchup probabilities in one predict_proba call.
+    Computes all possible Final round matchup probabilities in one predict_proba call.
 
     The returned cache is enough to write the competition CSV once every slot is
     concrete. No bracket simulation and no later-round prediction is performed.
 
     Style keyword handling:
     - Historical rows get style codes through join_style_keywords(...).
-    - Future Round-of-16 rows are synthesized here, so style objects must be
+    - Future Final round rows are synthesized here, so style objects must be
       passed through to make_single_fixture_features_fast(...).
     - If STYLE_FEATURES is empty, the extra arguments are harmless and ignored.
     """
-    matchups = collect_possible_round16_matchups(slot_candidate_pool)
+    matchups = collect_possible_final_round_matchups(slot_candidate_pool)
 
     fixture_frames = []
     cache_keys = []
@@ -2544,23 +2521,23 @@ def precompute_round16_probability_cache(model_artifact, ratings, state_snapshot
 
     fixture_feats = pd.concat(fixture_frames, ignore_index=True)
 
-    candidate_feature_export = build_round16_candidate_feature_export(
+    candidate_feature_export = build_final_round_candidate_feature_export(
         matchups=matchups,
         fixture_feats=fixture_feats,
         model_feature_cols=model_artifact["features"],
     )
-    candidate_feature_export.to_csv(ROUND16_CANDIDATE_FEATURES_CSV, index=False)
-    print(f"  Saved Round-of-16 candidate features → {ROUND16_CANDIDATE_FEATURES_CSV}")
+    candidate_feature_export.to_csv(FINAL_ROUND_CANDIDATE_FEATURES_CSV, index=False)
+    print(f"  Saved Final round candidate features → {FINAL_ROUND_CANDIDATE_FEATURES_CSV}")
 
     X = Xf(
         fixture_feats,
         model_artifact["features"],
-        "round16 strict v3 augmented features",
+        "final_round strict v3 augmented features",
     )
 
     clf = model_artifact["clf"]
 
-    print("\n  Predicting all Round-of-16 matchup probabilities in one forward pass...")
+    print("\n  Predicting all Final round matchup probabilities in one forward pass...")
     print(f"  Prediction matrix shape: {X.shape[0]:,} rows × {X.shape[1]:,} features")
 
     proba_matrix = clf.predict_proba(X)
@@ -2568,7 +2545,7 @@ def precompute_round16_probability_cache(model_artifact, ratings, state_snapshot
     probability_classes = resolve_probability_classes(
         clf=clf,
         proba=proba_matrix,
-        label="batched Round-of-16 prediction",
+        label="batched Final round prediction",
     )
     classes = list(probability_classes)
 
@@ -2613,7 +2590,7 @@ def precompute_round16_probability_cache(model_artifact, ratings, state_snapshot
 
     probability_table = pd.DataFrame(probability_rows)
 
-    print(f"  Cached Round-of-16 probabilities: {len(prob_cache):,}")
+    print(f"  Cached Final round probabilities: {len(prob_cache):,}")
     return prob_cache, probability_table
 
 
@@ -2622,15 +2599,15 @@ def is_unresolved_slot_name(team_name):
     return team_name in BRACKET_SLOT_CANDIDATES
 
 
-def build_round16_submission_assignment(slot_candidate_pool):
+def build_final_round_submission_assignment(slot_candidate_pool):
     """
     Builds the concrete slot assignment used for the competition upload CSV.
 
     Priority order:
-    1. Explicit entries in ROUND16_SUBMISSION_SLOT_ASSIGNMENT.
+    1. Explicit entries in FINAL_ROUND_SUBMISSION_SLOT_ASSIGNMENT.
     2. Singleton runtime candidate lists, when a slot has exactly one candidate.
 
-    If any Round-of-16 slot still has multiple possible teams, the competition
+    If any Final round slot still has multiple possible teams, the competition
     upload cannot be written safely because the platform requires one concrete
     row per actual match with full country names.
     """
@@ -2638,11 +2615,11 @@ def build_round16_submission_assignment(slot_candidate_pool):
     unresolved = {}
 
     for slot, candidates in slot_candidate_pool.items():
-        if slot in ROUND16_SUBMISSION_SLOT_ASSIGNMENT:
-            team = ROUND16_SUBMISSION_SLOT_ASSIGNMENT[slot]
+        if slot in FINAL_ROUND_SUBMISSION_SLOT_ASSIGNMENT:
+            team = FINAL_ROUND_SUBMISSION_SLOT_ASSIGNMENT[slot]
             if team not in candidates:
                 raise ValueError(
-                    f"ROUND16_SUBMISSION_SLOT_ASSIGNMENT maps {slot!r} to {team!r}, "
+                    f"FINAL_ROUND_SUBMISSION_SLOT_ASSIGNMENT maps {slot!r} to {team!r}, "
                     f"but the runtime candidate pool is {candidates}."
                 )
             assignment[slot] = team
@@ -2654,9 +2631,9 @@ def build_round16_submission_assignment(slot_candidate_pool):
     return assignment, unresolved
 
 
-def build_round16_submission_rows(model_artifact, prob_cache, slot_assignment):
+def build_final_round_submission_rows(model_artifact, prob_cache, slot_assignment):
     """
-    Builds the exact CSV schema required by the competition for Round of 16.
+    Builds the exact CSV schema required by the competition for Final round.
 
     Uses 90-minute outcome probabilities:
     - p_home_win
@@ -2669,15 +2646,15 @@ def build_round16_submission_rows(model_artifact, prob_cache, slot_assignment):
     """
     rows = []
 
-    for match in BRACKET_R16:
-        resolved = resolve_r16_match(match, slot_assignment)
+    for match in BRACKET_FINALS:
+        resolved = resolve_final_match(match, slot_assignment)
         home_team = resolved["home_team"]
         away_team = resolved["away_team"]
 
         if is_unresolved_slot_name(home_team) or is_unresolved_slot_name(away_team):
             raise ValueError(
-                f"Round-of-16 match {match['match_id']} is still unresolved: "
-                f"{home_team} vs {away_team}. Fill ROUND16_SUBMISSION_SLOT_ASSIGNMENT "
+                f"Final round match {match['match_id']} is still unresolved: "
+                f"{home_team} vs {away_team}. Fill FINAL_ROUND_SUBMISSION_SLOT_ASSIGNMENT "
                 "before creating an upload CSV."
             )
 
@@ -2690,7 +2667,7 @@ def build_round16_submission_rows(model_artifact, prob_cache, slot_assignment):
 
         if key not in prob_cache:
             raise KeyError(
-                f"Missing cached Round-of-16 probability for {home_team} vs {away_team} "
+                f"Missing cached Final round probability for {home_team} vs {away_team} "
                 f"on {match['date']}."
             )
 
@@ -2717,8 +2694,8 @@ def build_round16_submission_rows(model_artifact, prob_cache, slot_assignment):
     return pd.DataFrame(rows, columns=SUBMISSION_COLUMNS)
 
 
-def validate_submission_frame(submission_df, expected_rows=8):
-    """Validates the Round-of-16 upload shape before writing it."""
+def validate_submission_frame(submission_df, expected_rows=2):
+    """Validates the Final round upload shape before writing it."""
     if list(submission_df.columns) != SUBMISSION_COLUMNS:
         raise ValueError(
             f"Submission columns must be {SUBMISSION_COLUMNS}, got {list(submission_df.columns)}"
@@ -2726,7 +2703,7 @@ def validate_submission_frame(submission_df, expected_rows=8):
 
     if len(submission_df) != expected_rows:
         raise ValueError(
-            f"Round-of-16 submission must have {expected_rows} rows, got {len(submission_df)}."
+            f"Final round submission must have {expected_rows} rows, got {len(submission_df)}."
         )
 
     for col in ["home_team", "away_team"]:
@@ -2749,36 +2726,36 @@ def validate_submission_frame(submission_df, expected_rows=8):
         raise ValueError(f"Submission probability rows do not sum to 1: {row_sums}")
 
 
-def write_round16_competition_outputs(model_artifact, prob_cache, matchup_probability_table, slot_candidate_pool):
+def write_final_round_competition_outputs(model_artifact, prob_cache, matchup_probability_table, slot_candidate_pool):
     """
     Writes both a diagnostic candidate-probability file and, when possible, the
-    upload-ready Round-of-16 competition CSV.
+    upload-ready Final round competition CSV.
     """
     r32_candidates = matchup_probability_table[
-        matchup_probability_table["round"].eq("Round of 16")
+        matchup_probability_table["round"].eq("Final round")
     ].copy()
-    r32_candidates.to_csv(ROUND16_CANDIDATE_PROBABILITIES_CSV, index=False)
-    print(f"  Saved → {ROUND16_CANDIDATE_PROBABILITIES_CSV}")
+    r32_candidates.to_csv(FINAL_ROUND_CANDIDATE_PROBABILITIES_CSV, index=False)
+    print(f"  Saved → {FINAL_ROUND_CANDIDATE_PROBABILITIES_CSV}")
 
-    slot_assignment, unresolved = build_round16_submission_assignment(slot_candidate_pool)
+    slot_assignment, unresolved = build_final_round_submission_assignment(slot_candidate_pool)
 
     if unresolved:
-        print("\n  Round-of-16 upload CSV was not written yet.")
+        print("\n  Final round upload CSV was not written yet.")
         print("  These slots still have multiple possible future teams:")
         for slot, candidates in unresolved.items():
             print(f"    {slot}: {', '.join(candidates)}")
-        print("  Once official teams are known, fill ROUND16_SUBMISSION_SLOT_ASSIGNMENT and rerun.")
+        print("  Once official teams are known, fill FINAL_ROUND_SUBMISSION_SLOT_ASSIGNMENT and rerun.")
         return None
 
-    submission_df = build_round16_submission_rows(
+    submission_df = build_final_round_submission_rows(
         model_artifact=model_artifact,
         prob_cache=prob_cache,
         slot_assignment=slot_assignment,
     )
-    validate_submission_frame(submission_df, expected_rows=len(BRACKET_R16))
-    submission_df.to_csv(ROUND16_SUBMISSION_CSV, index=False)
+    validate_submission_frame(submission_df, expected_rows=len(BRACKET_FINALS))
+    submission_df.to_csv(FINAL_ROUND_SUBMISSION_CSV, index=False)
 
-    print(f"  Saved upload-ready Round-of-16 CSV → {ROUND16_SUBMISSION_CSV}")
+    print(f"  Saved upload-ready Final round CSV → {FINAL_ROUND_SUBMISSION_CSV}")
     return submission_df
 
 
@@ -2872,7 +2849,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=(
             "Build martj42 engineered features, add first-layer ratings and rolling "
-            "residual bias, then fit/predict the Round-of-16 model."
+            "residual bias, then fit/predict the Final round model."
         )
     )
     parser.add_argument(
@@ -2947,7 +2924,7 @@ if __name__ == "__main__":
     feats, latest_bias_df = compute_rolling_residual_bias_features(feats)
 
     # Enrich ratings dict with the latest rolling residual bias for future
-    # Round-of-16 fixtures. This is memory only, not written to team_ratings.csv.
+    # Final round fixtures. This is memory only, not written to team_ratings.csv.
     for _, row in latest_bias_df.iterrows():
         team = row["team"]
         if team in ratings:
@@ -2980,9 +2957,9 @@ if __name__ == "__main__":
     print("\nSaved v3 comparison rows to v3_full2014_client_rolling_residual_comparison_results.csv")
 
     print("\n" + "=" * 65)
-    print("Predicting Round of 16 probabilities only...")
+    print("Predicting Final round probabilities only...")
     print("=" * 65)
-    prob_cache, r32_probability_table = precompute_round16_probability_cache(
+    prob_cache, r32_probability_table = precompute_final_round_probability_cache(
         model_artifact=model_artifacts["v3"],
         ratings=ratings,
         state_snapshot=state_snapshot,
@@ -2993,7 +2970,7 @@ if __name__ == "__main__":
         style_encoder=style_encoder,
     )
 
-    write_round16_competition_outputs(
+    write_final_round_competition_outputs(
         model_artifact=model_artifacts["v3"],
         prob_cache=prob_cache,
         matchup_probability_table=r32_probability_table,
@@ -3005,6 +2982,6 @@ if __name__ == "__main__":
     print("=" * 65)
     acc, ll = metrics["v3"]
     print(f"  v3: accuracy={acc:.1%}  log-loss={ll:.4f}  n_eval={model_artifacts['v3']['n_eval_rows']}")
-    print(f"  Saved → {ROUND16_CANDIDATE_PROBABILITIES_CSV}")
-    if os.path.exists(ROUND16_SUBMISSION_CSV):
-        print(f"  Saved → {ROUND16_SUBMISSION_CSV}")
+    print(f"  Saved → {FINAL_ROUND_CANDIDATE_PROBABILITIES_CSV}")
+    if os.path.exists(FINAL_ROUND_SUBMISSION_CSV):
+        print(f"  Saved → {FINAL_ROUND_SUBMISSION_CSV}")

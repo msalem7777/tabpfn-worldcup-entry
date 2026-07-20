@@ -52,7 +52,7 @@ FIRST_CHECKPOINT      = pd.Timestamp("2014-01-01")  # aligns with TRAIN_START in
 CHECKPOINT_FREQ       = "QS"                        # quarterly (quarter-start); "MS" for monthly
 FINAL_CHECKPOINT      = None                        # None → day after last played match
 MIN_TRAIN_MATCHES     = 500                         # skip checkpoints with too little history
-DC_HALF_LIFE_YEARS    = 1.5
+DC_HALF_LIFE_YEARS    = 0.25
 
 
 def build_checkpoint_grid(matches: pd.DataFrame) -> list[pd.Timestamp]:

@@ -58,7 +58,7 @@ Outputs
   data/output/anchor_calibration_reliability_by_bin.csv    (Step-1 diagnostic)
   data/output/anchor_calibration_fit_summary.csv
   data/output/anchor_calibration_lambda_path.csv
-  data/output/calibrated_submission_anchor_gated_r16.csv       (if PREDICTIONS_CSV exists)
+  data/output/calibrated_submission_anchor_gated_finals.csv       (if PREDICTIONS_CSV exists)
   data/output/anchor_calibration_row_diagnostics.csv
 
 Nothing here calls TabPFN. All reference fits are seconds each.
@@ -97,14 +97,14 @@ FINAL_V3_FEATURES_CSV = INTERIM_DIR / "final_v3_training_engineered_features.csv
 ANCHORS_CSV           = INTERIM_DIR / "expert_anchors.csv"          # optional
 
 # Fixture application inputs (row-aligned pair exported by script 03).
-PREDICTIONS_CSV         = OUTPUT_DIR / "round_of_16_candidate_probabilities_rolling_residual_v3.csv"
-PREDICTION_FEATURES_CSV = OUTPUT_DIR / "round_of_16_candidate_features_rolling_residual_v3.csv"
+PREDICTIONS_CSV         = OUTPUT_DIR / "final_round_candidate_probabilities_rolling_residual_v3.csv"
+PREDICTION_FEATURES_CSV = OUTPUT_DIR / "final_round_candidate_features_rolling_residual_v3.csv"
 DEFAULT_NEUTRAL         = 1
 
 RELIABILITY_CSV           = OUTPUT_DIR / "anchor_calibration_reliability_by_bin.csv"
 FIT_SUMMARY_CSV           = OUTPUT_DIR / "anchor_calibration_fit_summary.csv"
 LAMBDA_PATH_CSV           = OUTPUT_DIR / "anchor_calibration_lambda_path.csv"
-CALIBRATED_SUBMISSION_CSV = OUTPUT_DIR / "calibrated_submission_anchor_gated_r16.csv"
+CALIBRATED_SUBMISSION_CSV = OUTPUT_DIR / "calibrated_submission_anchor_gated_finals.csv"
 ROW_DIAGNOSTICS_CSV       = OUTPUT_DIR / "anchor_calibration_row_diagnostics.csv"
 
 # ── Config ────────────────────────────────────────────────────────────────────

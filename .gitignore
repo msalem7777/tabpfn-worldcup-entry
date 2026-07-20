@@ -3,7 +3,16 @@ __pycache__/
 *.pyc
 .env
 .env.*
-plots/*.png
-data/raw/*.csv
-data/interim/*.csv
-data/output/*.csv
+
+# Local datasets and all generated artifacts. The repository intentionally
+# contains code and documentation only; users regenerate these locally.
+data/raw/
+data/interim/
+data/output/
+data/output_untuned/
+plots/
+
+# Competition submissions and diagnostic exports.
+*submission*.csv
+optimized_*.csv
+*.log

@@ -5,3 +5,4 @@ scikit-learn
 matplotlib
 tabpfn
 tabpfn-client
+scipy
